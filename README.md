@@ -131,7 +131,7 @@ Tests cover:
 
 ## Security
 
-If you discover any security-related issues, please email admin@labrodev.com instead of using the issue tracker.
+If you discover any security-related issues, please email contact@labrodev.com instead of using the issue tracker.
 
 
 ## Changelog
